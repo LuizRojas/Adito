@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
 import httpx
@@ -22,6 +23,11 @@ from .detalhe import USER_AGENT, detalhe_url, fetch_detalhe
 from .models import Acao
 from .scraper import coletar_campus
 from .vinculadas import fetch_vinculadas
+
+# Dois GETs independentes por ação (detalhe + vínculos). Em série, cada ação espera o RTT
+# somado dos dois; com poucas threads e httpx.Client compartilhado (conexão viva), elas
+# correm em paralelo mas a carga no src.ifes.edu.br se mantém próxima da antiga.
+WORKERS_PADRAO = 4
 
 Log = Callable[[str], None]
 
@@ -44,6 +50,7 @@ def extrair_acoes(
     *,
     headless: bool = True,
     max_acoes: int | None = None,
+    workers: int = WORKERS_PADRAO,
     log: Log = print,
 ) -> Execucao:
     """Lista as ações do campus, baixa detalhe e vínculos e grava um JSON por ação.
@@ -75,26 +82,47 @@ def extrair_acoes(
     log(f"[{campus}] {len(linhas)} ações listadas; baixando detalhe e vínculos")
 
     index: list[dict[str, str | None]] = []
+    workers = max(1, workers)
+    # Uma só sessão httpx: conexões TCP vivas, pool conservador (não enche o servidor).
+    limites = httpx.Limits(max_keepalive_connections=workers, max_connections=workers)
     with httpx.Client(follow_redirects=True, headers={"User-Agent": USER_AGENT},
-                      timeout=30) as cli:
-        for k, ref in enumerate(linhas, 1):
-            if not ref.acao_id:
-                exe.falha(f"linha {k} da listagem", "sem acao_id")
-                continue
+                      timeout=30, limits=limites) as cli:
+
+        def tarefa(k_ref: tuple[int, object]) -> tuple[int, object, dict | None, int, Exception | None]:
+            k, ref = k_ref
+            if not getattr(ref, "acao_id", None):
+                return k, ref, None, 0, ValueError("sem acao_id")
             try:
                 dados, mascarados = baixar_acao(ref.acao_id, campus, cli)
+                return k, ref, dados, mascarados, None
+            except Exception as e:  # uma ação ruim não derruba as outras (FR08)
+                return k, ref, None, 0, e
+
+        if workers == 1:
+            resultados = (tarefa((k, ref)) for k, ref in enumerate(linhas, 1))
+        else:
+            # Ordem de conclusão varia; a gravação e o índice ordenam depois.
+            pool = ThreadPoolExecutor(max_workers=workers)
+            futuros = [pool.submit(tarefa, (k, ref)) for k, ref in enumerate(linhas, 1)]
+            resultados = (f.result() for f in as_completed(futuros))
+
+        try:
+            for k, ref, dados, mascarados, erro in resultados:
+                if erro is not None:
+                    exe.falha(f"acao {ref.acao_id or f'linha {k}'}", erro)
+                    log(f"  ! acao {ref.acao_id}: {str(erro)[:80]}")
+                    continue
                 arquivo = novo / f"acao_{ref.acao_id}.json"
                 gravar_json(arquivo, dados)
-            except Exception as e:  # uma ação ruim não derruba as outras (FR08)
-                exe.falha(f"acao {ref.acao_id}", e)
-                log(f"  ! acao {ref.acao_id}: {str(e)[:80]}")
-                continue
-            if mascarados:
-                exe.conta("valores_mascarados", mascarados)
-            exe.conta("acoes_gravadas")
-            index.append({"acao_id": ref.acao_id, "processo": dados.get("Processo nº"),
-                          "titulo": dados.get("Título ação"), "arquivo": arquivo.name})
-            log(f"  [{k}/{len(linhas)}] {ref.acao_id} — {(dados.get('Título ação') or '')[:60]}")
+                if mascarados:
+                    exe.conta("valores_mascarados", mascarados)
+                exe.conta("acoes_gravadas")
+                index.append({"acao_id": ref.acao_id, "processo": dados.get("Processo nº"),
+                              "titulo": dados.get("Título ação"), "arquivo": arquivo.name})
+                log(f"  [{k}/{len(linhas)}] {ref.acao_id} — {(dados.get('Título ação') or '')[:60]}")
+        finally:
+            if workers > 1:
+                pool.shutdown(wait=True)
 
     index.sort(key=lambda i: _ordem(i["acao_id"] or ""))
     gravar_json(novo / "_index.json", index)

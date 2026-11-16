@@ -1,0 +1,1151 @@
+{
+  "schema": "unificado",
+  "enums": {
+    "tipo_gerenciamento": ["REITORIA", "INDEPENDENTE"],
+    "tipo_infraestrutura": ["EQUIPAMENTO", "SOFTWARE"],
+    "tipo_modalidade": ["VOLUNTARIO", "BOLSISTA"],
+    "tipo_modalidade_banca": ["DOUTORADO", "MESTRADO", "QUALIFICACAO_DOUTORADO", "QUALIFICACAO_MESTRADO", "GRADUACAO", "OUTRAS"],
+    "tipo_modalidade_orientacao": ["POS_DOUTORADO", "DOUTORADO", "MESTRADO", "ESPECIALIZACAO", "TCC", "INICIACAO_CIENTIFICA", "OUTROS"],
+    "tipo_natureza_projeto": ["PESQUISA_APLICADA", "PESQUISA_BASICA"],
+    "tipo_nivel_proficiencia": ["BEM", "RAZOAVELMENTE", "POUCO"],
+    "tipo_papel_evento": ["PARTICIPACAO", "ORGANIZACAO"],
+    "tipo_papel_orientacao": ["ORIENTADOR", "COORIENTADOR", "SUPERVISOR"],
+    "tipo_papel_projeto": ["COORDENADOR", "INTEGRANTE"],
+    "tipo_parecer_diretoria": ["APROVADO", "RECUSADO", "APROVACAO_SOLICITADA", "SALVO"],
+    "tipo_situacao_grupo": ["CERTIFICADO", "CERTIFICADO_NAO_ATUALIZADO", "EM_PREENCHIMENTO", "AGUARDANDO_CERTIFICACAO"],
+    "tipo_situacao_grupo_sigpesq": ["SALVO", "RECUSADO", "CERTIFICADO", "EXCLUIDOCNPQ"],
+    "tipo_status_ciclo": ["EM_ANDAMENTO", "CONCLUIDO"],
+    "tipo_status_participacao": ["ATIVO", "EGRESSO"],
+    "tipo_uf": ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO", "EXTERIOR"]
+  },
+  "dominios": {
+    "tipo_formacao": ["POS_DOUTORADO", "LIVRE_DOCENCIA", "DOUTORADO", "MESTRADO", "MESTRADO_PROFISSIONAL", "ESPECIALIZACAO", "APERFEICOAMENTO", "GRADUACAO", "CURSO_TECNICO_PROFISSIONALIZANTE", "ENSINO_MEDIO_2O_GRAU", "GRADUACAO_INTERROMPIDA", "MESTRADO_INTERROMPIDO", "ENSINO_MEDIO", "CURSO_TECNICO"],
+    "nivel_treinamento": ["POS_DOUTORADO", "DOUTORADO", "MESTRADO", "MESTRADO_PROFISSIONAL", "MBA", "ESPECIALIZACAO", "GRADUACAO", "ENSINO_PROFISSIONAL_TECNICO", "ENSINO_MEDIO_2O_GRAU"],
+    "natureza": ["Ensino", "Pesquisa", "Pós-Graduação", "Extensão", "Desenv. Institucional"],
+    "tipo_acao": ["Programa", "Projeto", "Curso", "Evento", "Prestação de Serviço", "Produto", "Programa em Rede"],
+    "tipo_projeto": ["PESQUISA", "EXTENSAO", "DESENVOLVIMENTO"],
+    "programa": ["pibic", "pibiti", "pibic_jr", "pibic_af", "finep", "propos", "piviti"],
+    "tipo_apoio_financiamento": ["AUXILIO_FINANCEIRO", "BOLSA", "COOPERACAO", "REMUNERACAO", "OUTRA"],
+    "tipo_organizacao": ["Campus", "AgenciaFinanciamento", "ParceiroDemandante", "Instituicao", "InstituicaoParceira"],
+    "tipo_artigo_evento": ["ARTIGO_PERIODICO", "TRABALHO_COMPLETO_CONGRESSO", "RESUMO_EXPANDIDO_CONGRESSO", "RESUMO_CONGRESSO", "OUTRO"],
+    "tipo_livro_capitulo": ["LIVRO_PUBLICADO", "LIVRO_ORGANIZADO", "CAPITULO_LIVRO"],
+    "tipo_patente_registro": ["PATENTE", "PROGRAMA_COMPUTADOR", "DESENHO_INDUSTRIAL", "MARCA"],
+    "categoria_producao_tecnica": ["SOFTWARE_SEM_PATENTE", "TRABALHO_TECNICO", "PRODUCAO_ARTISTICA_CULTURAL", "CURSO_CURTA_DURACAO", "DESENVOLVIMENTO_MATERIAL_DIDATICO", "OUTRA"],
+    "vinculo": ["Aluno", "Servidor", "Convidado"],
+    "situacao_participante": ["Cursando", "Aprovado", "Reprovado"]
+  },
+  "tabelas": {
+    "acao": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_origem", "tipo": "integer", "anulavel": true},
+        {"nome": "processo", "tipo": "text", "anulavel": true},
+        {"nome": "data_cadastro", "tipo": "date", "anulavel": true},
+        {"nome": "relatorio_aprovado", "tipo": "boolean", "anulavel": true},
+        {"nome": "url_detalhe", "tipo": "text", "anulavel": true},
+        {"nome": "id_natureza", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_tipo_acao", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_acao_pai", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_area_conhecimento", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_coordenador", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "iniciativa", "coluna_destino": "id"},
+        {"coluna": "id_natureza", "tabela_destino": "natureza", "coluna_destino": "id"},
+        {"coluna": "id_tipo_acao", "tabela_destino": "tipo_acao", "coluna_destino": "id"},
+        {"coluna": "id_acao_pai", "tabela_destino": "acao", "coluna_destino": "id"},
+        {"coluna": "id_area_conhecimento", "tabela_destino": "area_conhecimento", "coluna_destino": "id"},
+        {"coluna": "id_coordenador", "tabela_destino": "pessoa", "coluna_destino": "id"}
+      ]
+    },
+    "acao_campus": {
+      "identidade": false,
+      "chave_primaria": ["id_organizacao", "id_acao"],
+      "colunas": [
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_acao", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_acao", "tabela_destino": "acao", "coluna_destino": "id"}
+      ]
+    },
+    "area_atuacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "area", "tipo": "text", "anulavel": true},
+        {"nome": "subarea", "tipo": "text", "anulavel": true},
+        {"nome": "especialidade", "tipo": "text", "anulavel": true},
+        {"nome": "id_grande_area", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grande_area", "tabela_destino": "grande_area", "coluna_destino": "id"},
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "area_conhecimento": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "id_grande_area", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grande_area", "tabela_destino": "grande_area", "coluna_destino": "id"}
+      ]
+    },
+    "artigo_trabalho_evento": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_publicacao", "tipo": "bigint", "anulavel": true},
+        {"nome": "veiculo_revista_evento", "tipo": "text", "anulavel": true},
+        {"nome": "doi", "tipo": "text", "anulavel": true},
+        {"nome": "issn_isbn", "tipo": "text", "anulavel": true},
+        {"nome": "volume", "tipo": "text", "anulavel": true},
+        {"nome": "numero", "tipo": "text", "anulavel": true},
+        {"nome": "paginas", "tipo": "text", "anulavel": true},
+        {"nome": "data_publicacao", "tipo": "text", "anulavel": true},
+        {"nome": "natureza", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "producao", "coluna_destino": "id"},
+        {"coluna": "id_tipo_publicacao", "tabela_destino": "tipo_artigo_evento", "coluna_destino": "id"}
+      ]
+    },
+    "atividade": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "id_acao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_atividade", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_acao", "tabela_destino": "acao", "coluna_destino": "id"},
+        {"coluna": "id_tipo_atividade", "tabela_destino": "tipo_atividade", "coluna_destino": "id"}
+      ]
+    },
+    "atuacao_profissional": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "ano_inicio", "tipo": "integer", "anulavel": true},
+        {"nome": "ano_fim", "tipo": "integer", "anulavel": true},
+        {"nome": "atual", "tipo": "boolean", "anulavel": true},
+        {"nome": "vinculo", "tipo": "text", "anulavel": true},
+        {"nome": "enquadramento", "tipo": "text", "anulavel": true},
+        {"nome": "regime_trabalho", "tipo": "text", "anulavel": true},
+        {"nome": "atividades", "tipo": "text", "anulavel": true},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_instituicao", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_instituicao", "tabela_destino": "instituicao_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "autoria_producao": {
+      "identidade": false,
+      "chave_primaria": ["id_pessoa_lattes", "id_producao"],
+      "colunas": [
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_producao", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_producao", "tabela_destino": "producao", "coluna_destino": "id"}
+      ]
+    },
+    "banca_examinadora": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "modalidade", "tipo": "tipo_modalidade_banca", "anulavel": true, "valores_enum": ["DOUTORADO", "MESTRADO", "QUALIFICACAO_DOUTORADO", "QUALIFICACAO_MESTRADO", "GRADUACAO", "OUTRAS"]},
+        {"nome": "titulo_trabalho", "tipo": "text", "anulavel": true},
+        {"nome": "ano", "tipo": "integer", "anulavel": true},
+        {"nome": "curso", "tipo": "text", "anulavel": true},
+        {"nome": "descricao", "tipo": "text", "anulavel": true},
+        {"nome": "id_instituicao", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_candidato", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_instituicao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_candidato", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "categoria_producao_tecnica": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "cooperacao_grupo_externo_projeto": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa_externo", "id_projeto_pesquisa"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa_externo", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_externo", "tabela_destino": "grupo_pesquisa_externo", "coluna_destino": "id"},
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "curso": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "edital": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "titulo", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "email": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "endereco", "tipo": "text", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"}
+      ]
+    },
+    "endereco": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "logradouro", "tipo": "text", "anulavel": true},
+        {"nome": "numero", "tipo": "text", "anulavel": true},
+        {"nome": "complemento", "tipo": "text", "anulavel": true},
+        {"nome": "bairro", "tipo": "text", "anulavel": true},
+        {"nome": "localidade", "tipo": "text", "anulavel": true},
+        {"nome": "uf", "tipo": "tipo_uf", "anulavel": true, "valores_enum": ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO", "EXTERIOR"]},
+        {"nome": "cep", "tipo": "text", "anulavel": true},
+        {"nome": "caixa_postal", "tipo": "text", "anulavel": true},
+        {"nome": "latitude", "tipo": "text", "anulavel": true},
+        {"nome": "longitude", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "equipamento_software": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "tipo", "tipo": "tipo_infraestrutura", "anulavel": true, "valores_enum": ["EQUIPAMENTO", "SOFTWARE"]}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "especialidade_lattes": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "id_subarea_conhecimento", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_subarea_conhecimento", "tabela_destino": "subarea_conhecimento_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "estudante": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_campus", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_nivel_treinamento", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_curso", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "pessoa", "coluna_destino": "id"},
+        {"coluna": "id_campus", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_nivel_treinamento", "tabela_destino": "nivel_treinamento", "coluna_destino": "id"},
+        {"coluna": "id_curso", "tabela_destino": "curso", "coluna_destino": "id"}
+      ]
+    },
+    "evento_cientifico": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome_evento", "tipo": "text", "anulavel": false},
+        {"nome": "natureza_tipo_evento", "tipo": "text", "anulavel": true},
+        {"nome": "ano", "tipo": "integer", "anulavel": true}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "fax": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "numero", "tipo": "text", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"}
+      ]
+    },
+    "fomento_acao": {
+      "identidade": false,
+      "chave_primaria": ["id_organizacao", "id_acao"],
+      "colunas": [
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_acao", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_acao", "tabela_destino": "acao", "coluna_destino": "id"}
+      ]
+    },
+    "fomento_projeto": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_apoio", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_projeto_lattes", "tabela_destino": "projeto_lattes", "coluna_destino": "id"},
+        {"coluna": "id_tipo_apoio", "tabela_destino": "tipo_apoio_financiamento", "coluna_destino": "id"}
+      ]
+    },
+    "formacao_academica": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_formacao", "tipo": "bigint", "anulavel": true},
+        {"nome": "ano_inicio", "tipo": "integer", "anulavel": true},
+        {"nome": "ano_conclusao", "tipo": "integer", "anulavel": true},
+        {"nome": "titulo_trabalho", "tipo": "text", "anulavel": true},
+        {"nome": "descricao", "tipo": "text", "anulavel": true},
+        {"nome": "nome_orientador", "tipo": "text", "anulavel": true},
+        {"nome": "nome_coorientador", "tipo": "text", "anulavel": true},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_instituicao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_curso", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_tipo_formacao", "tabela_destino": "tipo_formacao", "coluna_destino": "id"},
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_instituicao", "tabela_destino": "instituicao_lattes", "coluna_destino": "id"},
+        {"coluna": "id_curso", "tabela_destino": "curso", "coluna_destino": "id"}
+      ]
+    },
+    "grande_area": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "grupo_pesquisa": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "sigla", "tipo": "text", "anulavel": true},
+        {"nome": "url_cnpq", "tipo": "text", "anulavel": true},
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_area_conhecimento", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_area_conhecimento", "tabela_destino": "area_conhecimento", "coluna_destino": "id"}
+      ]
+    },
+    "grupo_pesquisa_cnpq": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "situacao_grupo", "tipo": "tipo_situacao_grupo", "anulavel": true, "valores_enum": ["CERTIFICADO", "CERTIFICADO_NAO_ATUALIZADO", "EM_PREENCHIMENTO", "AGUARDANDO_CERTIFICACAO"]},
+        {"nome": "ano_formacao", "tipo": "integer", "anulavel": true},
+        {"nome": "data_situacao", "tipo": "date", "anulavel": true},
+        {"nome": "data_ultimo_envio", "tipo": "date", "anulavel": true},
+        {"nome": "repercussoes", "tipo": "text", "anulavel": true},
+        {"nome": "id_endereco", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_instituicao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_campus", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "grupo_pesquisa", "coluna_destino": "id"},
+        {"coluna": "id_endereco", "tabela_destino": "endereco", "coluna_destino": "id"},
+        {"coluna": "id_instituicao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_campus", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "grupo_pesquisa_equipamento": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa_cnpq", "id_equipamento_software"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_equipamento_software", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"},
+        {"coluna": "id_equipamento_software", "tabela_destino": "equipamento_software", "coluna_destino": "id"}
+      ]
+    },
+    "grupo_pesquisa_externo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "grupo_pesquisa_grande_area": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa_cnpq", "id_grande_area"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_grande_area", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"},
+        {"coluna": "id_grande_area", "tabela_destino": "grande_area", "coluna_destino": "id"}
+      ]
+    },
+    "grupo_pesquisa_linha_pesquisa": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa_cnpq", "id_linha_pesquisa"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_linha_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"},
+        {"coluna": "id_linha_pesquisa", "tabela_destino": "linha_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "grupo_pesquisa_projeto": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa", "id_projeto_pesquisa"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa", "tabela_destino": "grupo_pesquisa", "coluna_destino": "id"},
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "idioma": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome_idioma", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "iniciativa": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "instituicao_lattes": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "sigla", "tipo": "text", "anulavel": true},
+        {"nome": "pais", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "instituicao_parceira_cnpq": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "sigla", "tipo": "text", "anulavel": true},
+        {"nome": "uf", "tipo": "tipo_uf", "anulavel": true, "valores_enum": ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO", "EXTERIOR"]}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "lideranca_grupo_pesquisa": {
+      "identidade": false,
+      "chave_primaria": ["id_grupo_pesquisa", "id_pesquisador"],
+      "colunas": [
+        {"nome": "id_grupo_pesquisa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pesquisador", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa", "tabela_destino": "grupo_pesquisa", "coluna_destino": "id"},
+        {"coluna": "id_pesquisador", "tabela_destino": "pesquisador", "coluna_destino": "id"}
+      ]
+    },
+    "linha_pesquisa": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "descricao", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "livro_capitulo": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_livro_capitulo", "tipo": "bigint", "anulavel": true},
+        {"nome": "editora", "tipo": "text", "anulavel": true},
+        {"nome": "paginas", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "producao", "coluna_destino": "id"},
+        {"coluna": "id_tipo_livro_capitulo", "tabela_destino": "tipo_livro_capitulo", "coluna_destino": "id"}
+      ]
+    },
+    "membro_banca_examinadora": {
+      "identidade": false,
+      "chave_primaria": ["id_banca_examinadora", "id_pessoa_lattes"],
+      "colunas": [
+        {"nome": "id_banca_examinadora", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_banca_examinadora", "tabela_destino": "banca_examinadora", "coluna_destino": "id"},
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "membro_equipe_execucao_src": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_atividade", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_vinculo", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "membro_grupo", "coluna_destino": "id"},
+        {"coluna": "id_atividade", "tabela_destino": "atividade", "coluna_destino": "id"},
+        {"coluna": "id_pessoa", "tabela_destino": "pessoa", "coluna_destino": "id"},
+        {"coluna": "id_vinculo", "tabela_destino": "vinculo", "coluna_destino": "id"}
+      ]
+    },
+    "membro_grupo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "data_inicio", "tipo": "date", "anulavel": true},
+        {"nome": "data_fim", "tipo": "date", "anulavel": true},
+        {"nome": "id_papel", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_papel", "tabela_destino": "papel", "coluna_destino": "id"}
+      ]
+    },
+    "membro_grupo_cnpq": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "status_participacao", "tipo": "tipo_status_participacao", "anulavel": true, "valores_enum": ["ATIVO", "EGRESSO"]},
+        {"nome": "id_pessoa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "membro_grupo", "coluna_destino": "id"},
+        {"coluna": "id_pessoa", "tabela_destino": "pessoa", "coluna_destino": "id"},
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"}
+      ]
+    },
+    "membro_projeto": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "papel", "tipo": "tipo_papel_projeto", "anulavel": true, "valores_enum": ["COORDENADOR", "INTEGRANTE"]}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_projeto_lattes", "tabela_destino": "projeto_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "natureza": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "nivel_treinamento": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "organizacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "id_tipo_organizacao", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_organizacao_pai", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_tipo_organizacao", "tabela_destino": "tipo_organizacao", "coluna_destino": "id"},
+        {"coluna": "id_organizacao_pai", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "orientacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_origem", "tipo": "integer", "anulavel": true},
+        {"nome": "ano", "tipo": "integer", "anulavel": true},
+        {"nome": "valor_bolsa", "tipo": "numeric(12,2)", "anulavel": true},
+        {"nome": "data_inicio", "tipo": "date", "anulavel": true},
+        {"nome": "data_fim", "tipo": "date", "anulavel": true},
+        {"nome": "cancelado", "tipo": "boolean", "anulavel": true},
+        {"nome": "nome_cancelador", "tipo": "text", "anulavel": true},
+        {"nome": "data_cancelado", "tipo": "date", "anulavel": true},
+        {"nome": "relatorio_enviado", "tipo": "boolean", "anulavel": true},
+        {"nome": "modalidade", "tipo": "tipo_modalidade", "anulavel": true, "valores_enum": ["VOLUNTARIO", "BOLSISTA"]},
+        {"nome": "gerenciamento", "tipo": "tipo_gerenciamento", "anulavel": true, "valores_enum": ["REITORIA", "INDEPENDENTE"]},
+        {"nome": "id_programa", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_plano_trabalho", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_orientador", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_orientado", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_campus", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_financiador", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_programa", "tabela_destino": "programa", "coluna_destino": "id"},
+        {"coluna": "id_plano_trabalho", "tabela_destino": "plano_trabalho", "coluna_destino": "id"},
+        {"coluna": "id_orientador", "tabela_destino": "pesquisador", "coluna_destino": "id"},
+        {"coluna": "id_orientado", "tabela_destino": "estudante", "coluna_destino": "id"},
+        {"coluna": "id_campus", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_financiador", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "orientacao_lattes": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "titulo", "tipo": "text", "anulavel": false},
+        {"nome": "modalidade", "tipo": "tipo_modalidade_orientacao", "anulavel": true, "valores_enum": ["POS_DOUTORADO", "DOUTORADO", "MESTRADO", "ESPECIALIZACAO", "TCC", "INICIACAO_CIENTIFICA", "OUTROS"]},
+        {"nome": "papel_orientacao", "tipo": "tipo_papel_orientacao", "anulavel": true, "valores_enum": ["ORIENTADOR", "COORIENTADOR", "SUPERVISOR"]},
+        {"nome": "status", "tipo": "tipo_status_ciclo", "anulavel": true, "valores_enum": ["EM_ANDAMENTO", "CONCLUIDO"]},
+        {"nome": "ano_inicio", "tipo": "integer", "anulavel": true},
+        {"nome": "ano_conclusao", "tipo": "integer", "anulavel": true},
+        {"nome": "tipo_trabalho", "tipo": "text", "anulavel": true},
+        {"nome": "id_orientador", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_orientando", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_instituicao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_financiador", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_orientador", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_orientando", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_instituicao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_financiador", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "papel": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "parceiro_demandante_projeto": {
+      "identidade": false,
+      "chave_primaria": ["id_organizacao", "id_projeto_pesquisa"],
+      "colunas": [
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "parceria_grupo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_instituicao_parceira", "tipo": "bigint", "anulavel": false},
+        {"nome": "tipo", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"},
+        {"coluna": "id_instituicao_parceira", "tabela_destino": "instituicao_parceira_cnpq", "coluna_destino": "id"}
+      ]
+    },
+    "participacao_estudante_projeto": {
+      "identidade": false,
+      "chave_primaria": ["id_estudante", "id_projeto_pesquisa"],
+      "colunas": [
+        {"nome": "id_estudante", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_estudante", "tabela_destino": "estudante", "coluna_destino": "id"},
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "participacao_evento": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_evento_cientifico", "tipo": "bigint", "anulavel": false},
+        {"nome": "papel_evento", "tipo": "tipo_papel_evento", "anulavel": true, "valores_enum": ["PARTICIPACAO", "ORGANIZACAO"]},
+        {"nome": "titulo_apresentacao", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_evento_cientifico", "tabela_destino": "evento_cientifico", "coluna_destino": "id"}
+      ]
+    },
+    "participacao_pesquisador_projeto": {
+      "identidade": false,
+      "chave_primaria": ["id_pesquisador", "id_projeto_pesquisa"],
+      "colunas": [
+        {"nome": "id_pesquisador", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pesquisador", "tabela_destino": "pesquisador", "coluna_destino": "id"},
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "patente_registro": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_tipo_patente_registro", "tipo": "bigint", "anulavel": true},
+        {"nome": "modalidade_patente", "tipo": "text", "anulavel": true},
+        {"nome": "pais", "tipo": "text", "anulavel": true},
+        {"nome": "data_registro", "tipo": "text", "anulavel": true},
+        {"nome": "codigo_registro", "tipo": "text", "anulavel": true},
+        {"nome": "id_instituicao_depositante", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "producao", "coluna_destino": "id"},
+        {"coluna": "id_tipo_patente_registro", "tabela_destino": "tipo_patente_registro", "coluna_destino": "id"},
+        {"coluna": "id_instituicao_depositante", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "pesquisador": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_titulacao", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_organizacao", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "pessoa", "coluna_destino": "id"},
+        {"coluna": "id_titulacao", "tabela_destino": "titulacao", "coluna_destino": "id"},
+        {"coluna": "id_organizacao", "tabela_destino": "organizacao", "coluna_destino": "id"}
+      ]
+    },
+    "pesquisador_linha_pesquisa": {
+      "identidade": false,
+      "chave_primaria": ["id_pessoa_lattes", "id_linha_pesquisa"],
+      "colunas": [
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_linha_pesquisa", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_linha_pesquisa", "tabela_destino": "linha_pesquisa", "coluna_destino": "id"}
+      ]
+    },
+    "pessoa": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "pessoa_lattes": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_lattes", "tipo": "text", "anulavel": true},
+        {"nome": "nome_citacoes", "tipo": "text", "anulavel": true},
+        {"nome": "texto_resumo", "tipo": "text", "anulavel": true},
+        {"nome": "bolsa_produtividade", "tipo": "text", "anulavel": true},
+        {"nome": "endereco_profissional", "tipo": "text", "anulavel": true},
+        {"nome": "url_lattes", "tipo": "text", "anulavel": true},
+        {"nome": "data_atualizacao_cv", "tipo": "date", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "pessoa", "coluna_destino": "id"}
+      ]
+    },
+    "pessoa_lattes_titulacao": {
+      "identidade": false,
+      "chave_primaria": ["id_pessoa_lattes", "id_titulacao"],
+      "colunas": [
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_titulacao", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_titulacao", "tabela_destino": "titulacao", "coluna_destino": "id"}
+      ]
+    },
+    "pessoa_src": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "pessoa", "coluna_destino": "id"}
+      ]
+    },
+    "plano_trabalho": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "codigo", "tipo": "integer", "anulavel": true},
+        {"nome": "titulo", "tipo": "text", "anulavel": false},
+        {"nome": "id_projeto_pesquisa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_edital", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_area_conhecimento", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_projeto_pesquisa", "tabela_destino": "projeto_pesquisa", "coluna_destino": "id"},
+        {"coluna": "id_edital", "tabela_destino": "edital", "coluna_destino": "id"},
+        {"coluna": "id_area_conhecimento", "tabela_destino": "area_conhecimento", "coluna_destino": "id"}
+      ]
+    },
+    "premio_titulo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "descricao_titulo", "tipo": "text", "anulavel": false},
+        {"nome": "ano", "tipo": "integer", "anulavel": true},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"}
+      ]
+    },
+    "producao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "titulo", "tipo": "text", "anulavel": false},
+        {"nome": "ano", "tipo": "integer", "anulavel": true}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "producao_tecnica_artistica_bibliografica": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_categoria", "tipo": "bigint", "anulavel": true},
+        {"nome": "subtipo", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "producao", "coluna_destino": "id"},
+        {"coluna": "id_categoria", "tabela_destino": "categoria_producao_tecnica", "coluna_destino": "id"}
+      ]
+    },
+    "proficiencia_idioma": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa_lattes", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_idioma", "tipo": "bigint", "anulavel": false},
+        {"nome": "compreende", "tipo": "tipo_nivel_proficiencia", "anulavel": true, "valores_enum": ["BEM", "RAZOAVELMENTE", "POUCO"]},
+        {"nome": "fala", "tipo": "tipo_nivel_proficiencia", "anulavel": true, "valores_enum": ["BEM", "RAZOAVELMENTE", "POUCO"]},
+        {"nome": "le", "tipo": "tipo_nivel_proficiencia", "anulavel": true, "valores_enum": ["BEM", "RAZOAVELMENTE", "POUCO"]},
+        {"nome": "escreve", "tipo": "tipo_nivel_proficiencia", "anulavel": true, "valores_enum": ["BEM", "RAZOAVELMENTE", "POUCO"]}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_pessoa_lattes", "tabela_destino": "pessoa_lattes", "coluna_destino": "id"},
+        {"coluna": "id_idioma", "tabela_destino": "idioma", "coluna_destino": "id"}
+      ]
+    },
+    "programa": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "projeto_lattes": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "ano_inicio", "tipo": "integer", "anulavel": true},
+        {"nome": "ano_conclusao", "tipo": "integer", "anulavel": true},
+        {"nome": "situacao", "tipo": "tipo_status_ciclo", "anulavel": true, "valores_enum": ["EM_ANDAMENTO", "CONCLUIDO"]},
+        {"nome": "descricao", "tipo": "text", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "iniciativa", "coluna_destino": "id"}
+      ]
+    },
+    "projeto_pesquisa": {
+      "identidade": false,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_origem", "tipo": "integer", "anulavel": true},
+        {"nome": "data_inicio", "tipo": "date", "anulavel": true},
+        {"nome": "data_fim", "tipo": "date", "anulavel": true},
+        {"nome": "palavras_chave", "tipo": "text", "anulavel": true},
+        {"nome": "sigilo", "tipo": "boolean", "anulavel": true},
+        {"nome": "id_natureza_projeto", "tipo": "tipo_natureza_projeto", "anulavel": true, "valores_enum": ["PESQUISA_APLICADA", "PESQUISA_BASICA"]},
+        {"nome": "parecer_diretoria", "tipo": "tipo_parecer_diretoria", "anulavel": true, "valores_enum": ["APROVADO", "RECUSADO", "APROVACAO_SOLICITADA", "SALVO"]},
+        {"nome": "id_campus", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_area_conhecimento", "tipo": "bigint", "anulavel": true},
+        {"nome": "id_coordenador", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id", "tabela_destino": "iniciativa", "coluna_destino": "id"},
+        {"coluna": "id_campus", "tabela_destino": "organizacao", "coluna_destino": "id"},
+        {"coluna": "id_area_conhecimento", "tabela_destino": "area_conhecimento", "coluna_destino": "id"},
+        {"coluna": "id_coordenador", "tabela_destino": "pesquisador", "coluna_destino": "id"}
+      ]
+    },
+    "registro_participante": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "carga_horaria", "tipo": "numeric(8,2)", "anulavel": true},
+        {"nome": "certificado", "tipo": "boolean", "anulavel": true},
+        {"nome": "data_inicio", "tipo": "date", "anulavel": true},
+        {"nome": "data_termino", "tipo": "date", "anulavel": true},
+        {"nome": "id_atividade", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_pessoa", "tipo": "bigint", "anulavel": false},
+        {"nome": "id_situacao", "tipo": "bigint", "anulavel": true}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_atividade", "tabela_destino": "atividade", "coluna_destino": "id"},
+        {"coluna": "id_pessoa", "tabela_destino": "pessoa", "coluna_destino": "id"},
+        {"coluna": "id_situacao", "tabela_destino": "situacao_participante", "coluna_destino": "id"}
+      ]
+    },
+    "situacao_participante": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "subarea_conhecimento_lattes": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false},
+        {"nome": "id_area_conhecimento", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_area_conhecimento", "tabela_destino": "area_conhecimento", "coluna_destino": "id"}
+      ]
+    },
+    "telefone": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "numero", "tipo": "text", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"}
+      ]
+    },
+    "tipo_acao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_apoio_financiamento": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_artigo_evento": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_atividade": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_formacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_livro_capitulo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_organizacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_patente_registro": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "tipo_projeto": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "titulacao": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "vinculo": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "nome", "tipo": "text", "anulavel": false}
+      ],
+      "chaves_estrangeiras": []
+    },
+    "website": {
+      "identidade": true,
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "bigint", "anulavel": false},
+        {"nome": "url", "tipo": "text", "anulavel": false},
+        {"nome": "id_grupo_pesquisa_cnpq", "tipo": "bigint", "anulavel": false}
+      ],
+      "chaves_estrangeiras": [
+        {"coluna": "id_grupo_pesquisa_cnpq", "tabela_destino": "grupo_pesquisa_cnpq", "coluna_destino": "id"}
+      ]
+    }
+  }
+}

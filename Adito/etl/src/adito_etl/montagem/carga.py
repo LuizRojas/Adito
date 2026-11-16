@@ -1,208 +1,38 @@
-#!/usr/bin/env python3
-"""Popula o schema `unificado` com o que o ETL do Adito já extraiu.
+"""Transforma o bruto do ETL (`brutos/` + `trabalho/pessoas.json`) nas linhas das tabelas do
+modelo unificado, em memória.
 
-Lê a pasta do ETL (`brutos/` de cada fonte + `trabalho/pessoas.json` do
-cruzamento), gera um único arquivo SQL (uma transação, só INSERT) e o executa
-com o psql do container `oraculo-postgres` deste diretório.
-
-Não altera a estrutura do banco: nenhum CREATE/ALTER/DROP/TRUNCATE. As tabelas de
-domínio populadas pelo DDL (`01_tipos_e_dominios.sql`) não recebem linhas novas:
-valor que não está nelas vira NULL e aparece no relatório. Se o banco já tiver
-dados, a carga para sem gravar nada; para recarregar, rode `./recriar_banco.sh`
-antes.
-
-Uso (a partir de Adito/scripts/; o ETL é a pasta irmã Adito/etl/):
-    ./recriar_banco.sh                          # banco vazio, se ainda não subiu
-    python3 popular_banco.py
-    python3 popular_banco.py --so-gerar         # só gera o SQL
-    python3 popular_banco.py --etl OUTRA/PASTA/etl
-
-Pré-requisito no ETL: `adito-etl cruzar` já rodado (gera `trabalho/pessoas.json`).
-
-Dados pessoais: o ETL não guarda CPF, e-mail, telefone, fax nem data de
-nascimento. O banco não tem mais `pessoa.cpf` nem e-mail de pessoa (removidos do
-DDL em 2026-11-11); `pessoa_src.dt_nasc`, `email` (só de grupo), `telefone` e
-`fax` ficam vazios. Sexo e endereço profissional (Lattes, sem telefone) e o endereço
-do grupo (CNPq) entram (decisão do usuário em 2026-11-11). Antes de executar, o SQL
-gerado é conferido: se tiver algo com formato de e-mail ou CPF, a carga para.
-
-O SQL gerado e o relatório ficam em `<etl>/saida/` (fora do git do ETL), porque
-contêm nomes de pessoas.
+É a lógica que antes gerava INSERTs para o PostgreSQL (`scripts/popular_banco.py`). Agora
+as linhas ficam em dicionários e `saida.py` as valida contra o contrato (`esquema.json`)
+e grava os JSONs. Ids de tabelas de domínio saem direto do contrato (posição na lista + 1),
+sem subconsulta SQL.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
-import os
 import re
-import subprocess
-import sys
-import unicodedata
 from collections import Counter, defaultdict
-from datetime import date
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-AQUI = Path(__file__).resolve().parent
-DDL = AQUI / "sql"
-S = "unificado"
-LOTE = 500
-
-
-# ============================================================================ util
-def forma(nome: Any) -> str:
-    """Mesma forma canônica do cruzamento do ETL (`cruzamento/normalizar.py`)."""
-    if nome is None:
-        return ""
-    s = unicodedata.normalize("NFD", str(nome))
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    s = "".join(c if c.isalnum() or c.isspace() else " " for c in s)
-    return " ".join(s.lower().split())
+from ..comum import ler_json as ler
+from .esquema import Esquema, carregar_esquema
+from .valores import (ano, booleano, chave_enum, data, dinheiro, forma, inteiro, nomes, texto)
 
 
-def chave_enum(v: Any) -> str:
-    """'Aprovação Solicitada' -> 'APROVACAO_SOLICITADA'; 'Pibic-Jr' -> 'PIBIC_JR'; '2º' -> '2O'."""
-    return "_".join(forma(unicodedata.normalize("NFKD", str(v or ""))).upper().split())
-
-
-def texto(v: Any) -> str | None:
-    if v is None:
-        return None
-    s = " ".join(str(v).split()) if not isinstance(v, str) or "\n" not in v else str(v).strip()
-    return None if s in ("", "None", "-", "null") else s
-
-
-def inteiro(v: Any) -> int | None:
-    if isinstance(v, bool):
-        return None
-    if isinstance(v, int):
-        return v
-    m = re.search(r"\d+", str(v or ""))
-    return int(m.group(0)) if m else None
-
-
-def ano(v: Any) -> int | None:
-    n = inteiro(v)
-    return n if n and 1900 <= n <= 2100 else None
-
-
-def booleano(v: Any) -> bool | None:
-    if isinstance(v, bool):
-        return v
-    s = forma(v)
-    if s in ("true", "sim", "s", "1"):
-        return True
-    if s in ("false", "nao", "n", "0"):
-        return False
-    return None
-
-
-def data(v: Any) -> str | None:
-    """dd/mm/aaaa, dd-mm-aa ou aaaa-mm-dd -> 'aaaa-mm-dd'."""
-    s = str(v or "").strip()
-    m = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})(?:[ T].*)?", s)
-    if m:
-        d, mth, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        y = y + 2000 if y < 100 else y
-    else:
-        m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2}).*", s)
-        if not m:
-            return None
-        y, mth, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    try:
-        return date(y, mth, d).isoformat()
-    except ValueError:
-        return None
-
-
-def dinheiro(v: Any) -> Decimal | None:
-    s = str(v or "").strip()
-    if not s or s == "None":
-        return None
-    s = s.replace(".", "").replace(",", ".") if "," in s else s
-    try:
-        return Decimal(s).quantize(Decimal("0.01"))
-    except InvalidOperation:
-        return None
-
-
-def nomes(campo: Any, sep: str) -> list[str]:
-    if not isinstance(campo, str):
-        return []
-    return [n.strip() for n in re.split(sep, campo) if n.strip() and n.strip() != "None"]
-
-
-def ler(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-class Sql(str):
-    """Trecho SQL que vai sem aspas (subconsulta de domínio)."""
-
-
-def literal(v: Any) -> str:
-    if v is None:
-        return "NULL"
-    if isinstance(v, Sql):
-        return str(v)
-    if isinstance(v, bool):
-        return "TRUE" if v else "FALSE"
-    if isinstance(v, (int, Decimal)):
-        return str(v)
-    return "'" + str(v).replace("'", "''") + "'"
-
-
-# ============================================================================ DDL
-def ler_ddl() -> tuple[dict[str, list[str]], dict[str, set[str]]]:
-    """Valores dos ENUMs e das tabelas de domínio, lidos do próprio DDL."""
-    sql = (DDL / "01_tipos_e_dominios.sql").read_text(encoding="utf-8")
-    enums = {m.group(1): re.findall(r"'([^']+)'", m.group(2))
-             for m in re.finditer(r"CREATE TYPE unificado\.(\w+) AS ENUM \((.*?)\);", sql, re.S)}
-    dominios = {m.group(1): set(re.findall(r"'([^']+)'", m.group(2)))
-                for m in re.finditer(r"INSERT INTO unificado\.(\w+) \(nome\) VALUES(.*?);", sql, re.S)}
-    return enums, dominios
-
-
-# ============================================================================ carga
 class Carga:
-    # Ordem de inserção (respeita as chaves estrangeiras).
-    ORDEM = [
-        "organizacao", "instituicao_lattes", "instituicao_parceira_cnpq", "endereco", "grande_area", "area_conhecimento", "subarea_conhecimento_lattes", "especialidade_lattes", "idioma",
-        "titulacao", "curso", "pessoa", "pessoa_lattes", "pessoa_src", "pesquisador",
-        "estudante", "area_atuacao", "grupo_pesquisa", "grupo_pesquisa_cnpq", "website",
-        "grupo_pesquisa_externo", "linha_pesquisa", "papel", "membro_grupo", "membro_grupo_cnpq",
-        "iniciativa", "acao", "tipo_atividade",
-        "atividade", "membro_equipe_execucao_src", "registro_participante",
-        "projeto_pesquisa", "projeto_lattes", "edital", "plano_trabalho", "orientacao",
-        "formacao_academica", "atuacao_profissional", "orientacao_lattes",
-        "banca_examinadora", "evento_cientifico", "producao", "artigo_trabalho_evento",
-        "livro_capitulo", "producao_tecnica_artistica_bibliografica", "premio_titulo",
-        "membro_projeto", "fomento_projeto", "participacao_evento", "proficiencia_idioma",
-        "lideranca_grupo_pesquisa", "cooperacao_grupo_externo_projeto", "fomento_acao",
-        "acao_campus", "parceiro_demandante_projeto", "participacao_estudante_projeto",
-        "autoria_producao", "participacao_pesquisador_projeto", "membro_banca_examinadora",
-        "grupo_pesquisa_projeto", "pesquisador_linha_pesquisa", "grupo_pesquisa_grande_area",
-        "grupo_pesquisa_linha_pesquisa", "parceria_grupo", "equipamento_software", "grupo_pesquisa_equipamento",
-        "pessoa_lattes_titulacao",
-    ]
-    # Tabelas com id próprio (identity) que recebem id explícito; o resto usa o id da base.
-    BASE = {"instituicao_lattes": "organizacao", "pessoa_lattes": "pessoa", "pessoa_src": "pessoa",
-            "pesquisador": "pessoa", "estudante": "pessoa", "acao": "iniciativa",
-            "projeto_pesquisa": "iniciativa", "projeto_lattes": "iniciativa",
-            "membro_equipe_execucao_src": "membro_grupo", "grupo_pesquisa_cnpq": "grupo_pesquisa",
-            "membro_grupo_cnpq": "membro_grupo", "instituicao_parceira_cnpq": "organizacao", "artigo_trabalho_evento": "producao",
-            "livro_capitulo": "producao", "producao_tecnica_artistica_bibliografica": "producao"}
-    JUNCAO = {"lideranca_grupo_pesquisa", "cooperacao_grupo_externo_projeto", "fomento_acao",
-              "acao_campus", "parceiro_demandante_projeto", "participacao_estudante_projeto",
-              "autoria_producao", "participacao_pesquisador_projeto", "membro_banca_examinadora",
-              "grupo_pesquisa_projeto", "pesquisador_linha_pesquisa", "grupo_pesquisa_grande_area",
-              "grupo_pesquisa_linha_pesquisa", "grupo_pesquisa_equipamento", "pessoa_lattes_titulacao"}
+    """Acumula, tabela a tabela, as linhas do modelo unificado.
 
-    def __init__(self, etl: Path):
+    `novo` cria uma linha com id sequencial; `sub` completa a linha de uma subclasse que
+    compartilha o id da base; `juncao` registra par de uma tabela N:N; `unico` evita
+    duplicar entidades por chave. Só as colunas preenchidas ficam nas linhas; o resto
+    vira NULL na gravação (`saida.py`).
+    """
+
+    def __init__(self, etl: Path, esquema: Esquema | None = None):
         self.etl = etl
-        self.enums, self.dominios = ler_ddl()
+        self.esquema = esquema or carregar_esquema()
+        self.enums = self.esquema.enums
+        self.dominios = self.esquema.dominios
         self.seq: Counter = Counter()
         self.linhas: dict[str, dict[Any, dict]] = defaultdict(dict)  # tabela -> chave -> linha
         self.cache: dict[tuple, int] = {}
@@ -250,16 +80,17 @@ class Carga:
         self.aviso(f"valor fora do ENUM {tipo} (gravado NULL)", valor)
         return None
 
-    def dominio(self, tabela: str, valor: Any, alias: dict[str, str] | None = None) -> Sql | None:
+    def dominio(self, tabela: str, valor: Any, alias: dict[str, str] | None = None) -> int | None:
+        """Id da linha de uma tabela de domínio (as linhas iniciais vêm do contrato; o id é a posição + 1)."""
         if texto(valor) is None:
             return None
         # 'Campus Serra - Bolsa' -> tenta também só 'Bolsa'
         for candidato in dict.fromkeys([valor, str(valor).split(" - ")[-1]]):
             k = chave_enum(candidato)
             k = (alias or {}).get(k, k)
-            for nome in self.dominios[tabela]:
+            for pos, nome in enumerate(self.dominios[tabela], start=1):
                 if chave_enum(nome) == k:
-                    return Sql(f"(SELECT id FROM {S}.{tabela} WHERE nome = {literal(nome)})")
+                    return pos
         self.aviso(f"valor fora do domínio {tabela} (gravado NULL)", valor)
         return None
 
@@ -374,7 +205,7 @@ class Carga:
     def carregar_pessoas(self) -> None:
         arq = self.etl / "trabalho" / "pessoas.json"
         if not arq.exists():
-            raise SystemExit(f"erro: {arq} não existe; rode `adito-etl cruzar` no ETL antes")
+            raise FileNotFoundError(f"{arq} não existe; rode `adito-etl cruzar` antes")
         self.indice: dict[str, list[tuple[int, dict]]] = defaultdict(list)
         for p in ler(arq):
             pid = self.novo("pessoa", nome=p["nome"])
@@ -445,7 +276,7 @@ class Carga:
                      id_tipo_acao=self.dominio("tipo_acao", a.get("Tipo ação")),
                      id_area_conhecimento=self.area(a.get("Grande área conhecimento"), a.get("Grande área conhecimento")),
                      id_coordenador=coord, id_acao_pai=None)
-            for c in {a.get("Campus"), a.get("campus")} - {None}:
+            for c in sorted({a.get("Campus"), a.get("campus")} - {None}, key=str):  # ordem fixa: ids estáveis entre execuções
                 self.juncao("acao_campus", id_organizacao=self.campus(c), id_acao=i)
             if forma(a.get("Fomento")) not in ("", "sem vinculo"):
                 self.juncao("fomento_acao", id_organizacao=self.org(a["Fomento"], "AgenciaFinanciamento"),
@@ -948,124 +779,6 @@ class Carga:
                         eq = self.unico("equipamento_software", (tipo, forma(it[k])), nome=texto(it[k]), tipo=tipo)
                         self.juncao("grupo_pesquisa_equipamento", id_grupo_pesquisa_cnpq=gid, id_equipamento_software=eq)
 
-    # ================================================================ SQL
-    def tabelas_com_dados(self) -> list[str]:
-        faltando = set(self.linhas) - set(self.ORDEM)
-        if faltando:
-            raise RuntimeError(f"tabelas fora da ORDEM: {faltando}")
-        return [t for t in self.ORDEM if self.linhas.get(t)]
-
-    def sql(self) -> str:
-        out = ["-- Gerado por Adito/scripts/popular_banco.py. Só INSERT; uma transação.",
-               "\\set ON_ERROR_STOP on", "BEGIN;", f"SET search_path TO {S}, public;",
-               "DO $$ BEGIN",
-               "  IF EXISTS (SELECT 1 FROM unificado.pessoa) OR EXISTS (SELECT 1 FROM unificado.iniciativa)",
-               "     OR EXISTS (SELECT 1 FROM unificado.organizacao) OR EXISTS (SELECT 1 FROM unificado.producao) THEN",
-               "    RAISE EXCEPTION 'o banco já tem dados: rode ./recriar_banco.sh antes de popular';",
-               "  END IF;", "END $$;"]
-        for t in self.tabelas_com_dados():
-            linhas = list(self.linhas[t].values())
-            if t in self.BASE or t not in self.JUNCAO:
-                linhas.sort(key=lambda r: r.get("id", 0))
-            cols: list[str] = []
-            for r in linhas:
-                cols += [c for c in r if c not in cols]
-            for i in range(0, len(linhas), LOTE):
-                valores = ",\n".join("(" + ", ".join(literal(r.get(c)) for c in cols) + ")"
-                                     for r in linhas[i:i + LOTE])
-                out.append(f"INSERT INTO {S}.{t} ({', '.join(cols)}) VALUES\n{valores};")
-        for t in self.tabelas_com_dados():
-            if t not in self.BASE and t not in self.JUNCAO:
-                out.append(f"SELECT setval(pg_get_serial_sequence('{S}.{t}', 'id'), "
-                           f"(SELECT max(id) FROM {S}.{t}));")
-        out.append("COMMIT;")
-        return "\n".join(out) + "\n"
-
+    # ================================================================ resultado
     def contagens(self) -> dict[str, int]:
-        return {t: len(self.linhas[t]) for t in self.tabelas_com_dados()}
-
-
-# ============================================================================ main
-EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
-CPF = re.compile(r"(?<![\d.])\d{3}\.\d{3}\.\d{3}-\d{2}(?![\d])|(?<!\d)\d{11}(?!\d)")
-
-
-def conferir_pii(sql: str) -> list[str]:
-    achados = []
-    for nome, rx in (("e-mail", EMAIL), ("CPF/11 dígitos", CPF)):
-        m = rx.search(sql)
-        if m:
-            achados.append(f"{nome} perto de: {sql[max(0, m.start() - 40):m.end() + 10]!r}")
-    return achados
-
-
-def ler_env(path: Path) -> dict[str, str]:
-    env = {}
-    if path.exists():
-        for linha in path.read_text(encoding="utf-8").splitlines():
-            if "=" in linha and not linha.lstrip().startswith("#"):
-                k, v = linha.split("=", 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
-    return env
-
-
-def main(argv: Iterable[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Popula o schema unificado com os dados do ETL do Adito.")
-    ap.add_argument("--etl", type=Path, default=os.environ.get("ADITO_ETL_DIR") or AQUI.parent / "etl",
-                    help="Pasta etl/ do Adito (com brutos/ e trabalho/). Padrão: $ADITO_ETL_DIR ou ../etl")
-    ap.add_argument("--saida", type=Path, default=None, help="Arquivo SQL (padrão: <etl>/saida/carga_banco.sql)")
-    ap.add_argument("--so-gerar", action="store_true", help="Só gera o SQL e o relatório; não executa")
-    args = ap.parse_args(list(argv) if argv is not None else None)
-    etl = args.etl.expanduser().resolve()
-    if not (etl / "brutos").is_dir():
-        ap.error(f"{etl} não parece a pasta etl/ do Adito (falta brutos/)")
-
-    carga = Carga(etl)
-    carga.carregar_pessoas()
-    carga.src()
-    carga.sigpesq()
-    carga.lattes()
-    carga.cnpq()
-    carga.completar_areas()
-    sql = carga.sql()
-
-    saida = args.saida or etl / "saida" / "carga_banco.sql"
-    saida.parent.mkdir(parents=True, exist_ok=True)
-    pii = conferir_pii(sql)
-    if pii:
-        print("erro: o SQL gerado tem algo com formato de dado pessoal; nada foi gravado no banco:", file=sys.stderr)
-        for p in pii:
-            print(f"  {p}", file=sys.stderr)
-        return 2
-    saida.write_text(sql, encoding="utf-8")
-    relatorio = {"contagens": carga.contagens(),
-                 "avisos": {k: {"quantidade": v, "exemplos": sorted(carga.exemplos.get(k, []))}
-                            for k, v in sorted(carga.avisos.items())},
-                 "dados_sem_coluna_no_banco": dict(sorted(carga.sem_coluna.items()))}
-    (saida.parent / "carga_banco_relatorio.json").write_text(
-        json.dumps(relatorio, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    print(f"SQL: {saida} ({saida.stat().st_size // 1024} KiB)")
-    for t, n in relatorio["contagens"].items():
-        print(f"  {t:45s} {n:7d}")
-    for k, v in relatorio["avisos"].items():
-        print(f"  aviso: {k}: {v['quantidade']}" + (f" (ex.: {'; '.join(v['exemplos'][:3])})" if v["exemplos"] else ""))
-    for k, v in relatorio["dados_sem_coluna_no_banco"].items():
-        print(f"  sem coluna: {k}: {v}")
-    if args.so_gerar:
-        return 0
-
-    env = {**ler_env(AQUI / ".env.example"), **ler_env(AQUI / ".env")}
-    cmd = ["docker", "compose", "exec", "-T", "oraculo-postgres", "psql", "-q", "-v", "ON_ERROR_STOP=1",
-           "-U", env.get("POSTGRES_USER", "oraculo"), "-d", env.get("POSTGRES_DB", "oraculo_db")]
-    with saida.open("rb") as f:
-        r = subprocess.run(cmd, cwd=AQUI, stdin=f)
-    if r.returncode != 0:
-        print("erro: a carga falhou e a transação foi desfeita (o banco ficou como estava)", file=sys.stderr)
-        return 1
-    print("carga concluída")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+        return {t: len(l) for t, l in sorted(self.linhas.items()) if l}
