@@ -2,7 +2,7 @@
 
 Scripts que a equipe de dados usa para montar o pacote entregue ao usuário. O usuário do Adito nunca roda nada desta pasta.
 
-Referências: `../docs/discovery/adito.md` (rev. 4), `../docs/requirements/adito-etl.md`, stories `../docs/stories/US-ETL-*.md`. Carga no banco unificado: `../scripts/popular_banco.py`.
+Referências: `../docs/discovery/adito.md` (rev. 4), `../docs/requirements/adito-etl.md`, stories `../docs/stories/US-ETL-*.md`. Montagem dos JSONs do modelo unificado: `adito-etl montar-json` (ver abaixo); construção do DuckDB: `../scripts/gerar_duckdb.py`.
 
 ## Fases
 
@@ -14,7 +14,8 @@ Referências: `../docs/discovery/adito.md` (rev. 4), `../docs/requirements/adito
 | Extração CNPq/DGP | Espelho de cada grupo do SigPesq (URL em `Column1`) | `adito-etl cnpq` | US-ETL-04 |
 | Extração Lattes | Currículos da lista `entradas/lattes.csv` pelo `scriptLattes` | `adito-etl lattes` | US-ETL-05 |
 | Cruzamento | Liga pessoas entre as fontes pelo nome (inferência do horizon) | `adito-etl cruzar` | US-ETL-06 |
-| Montagem | Parquet + `abrir.sql` + `manifesto.json` | — | fora deste recorte |
+| Montagem | 41 JSONs do modelo unificado + `manifesto.json` direto do bruto (sem PostgreSQL) | `adito-etl montar-json` | US-ETL-08 |
+| Conferência | Valida contagens, colunas e chaves estrangeiras de uma pasta de JSONs montados | `adito-etl validar-json` | US-ETL-08 |
 
 ## Como rodar
 
@@ -33,9 +34,13 @@ cp .env.example .env                     # ADITO_CREDENCIAIS=infisical + INFISIC
 .venv/bin/adito-etl cnpq                          # brutos/cnpq/ (precisa do bruto do SigPesq)
 .venv/bin/adito-etl lattes                        # brutos/lattes/ (lista em entradas/lattes.csv, ver abaixo)
 .venv/bin/adito-etl cruzar                        # trabalho/pessoas.json + relatorio_cruzamento.md
+.venv/bin/adito-etl montar-json                   # saida/json/<41 tabelas>.json + manifesto.json
+.venv/bin/adito-etl validar-json                  # (opcional) confere a pasta sem reprocessar
 .venv/bin/adito-etl verificar-pii                 # confere brutos/ e trabalho/
 .venv/bin/python -m pytest                        # testes (inclui a varredura de PII sobre os dados reais)
 ```
+
+Depois, `python ../scripts/gerar_duckdb.py` lê `saida/json/` e grava `app/data/dados.duckdb`. O pipeline inteiro é JSON de ponta a ponta: não há mais PostgreSQL nem docker no caminho (o DDL do modelo unificado ficou em `../docs/specs/ddl_referencia/` só como referência; a fonte de verdade é agora `src/adito_etl/montagem/esquema.json`).
 
 A lista do Lattes (`entradas/lattes.csv`, colunas `nome,lattes_id`) é dado pessoal e não vai para o
 repositório (`entradas/` está no `.gitignore`). Peça o arquivo à equipe ou monte o seu com o
@@ -43,6 +48,7 @@ cabeçalho `nome,lattes_id` e uma linha por pesquisador; `--lista <arquivo>` apo
 
 Outros comandos:
 - `adito-etl src-acoes --max 3` grava só 3 ações (teste). A listagem ordena por Processo nº, é sempre em série e confere o "Total" da consulta (sem ordem fixa, a consulta repete e omite ações: 159 de 207 em paralelo, 196-197 em série, em 2026-11-10).
+- `adito-etl src-acoes --workers N` paraleliza o download de detalhe + vínculos de cada ação em N threads (padrão 4; `--workers 1` volta ao serial de antes). A mesma `httpx.Client` serve todas as threads e o pool de conexões é limitado a N, para não sobrecarregar o SRC.
 - `adito-etl src-participacoes --processo 23158.000000/2025-00` coleta só os processos indicados; sem `--processo`, lê `brutos/src/acoes/_index.json` e pula os já gravados (retomada).
 - `adito-etl sigpesq-converter --de PASTA` converte XLSX do SigPesq já baixados (ex.: `data/raw/sigpesq` do horizon_etl), sem apagar a origem.
 - `adito-etl lattes-converter --de PASTA` converte JSON do scriptLattes já gerados (ex.: `data/lattes_json` do horizon_etl), sem apagar a origem. Currículo vazio (`[Nome-nao-identificado]`) vira falha.

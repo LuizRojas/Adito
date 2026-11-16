@@ -34,7 +34,7 @@ Decisões tomadas para levar o Oráculo-ESX (web, em Docker) para um aplicativo 
 
 ## ETL do Adito (EPIC-07)
 
-Extração de SRC, SigPesq, CNPq/DGP e Lattes e cruzamento por nome, em [../etl/](../etl/). Carga no banco unificado por [../scripts/popular_banco.py](../scripts/popular_banco.py).
+Extração de SRC, SigPesq, CNPq/DGP e Lattes e cruzamento por nome, em [../etl/](../etl/). Montagem dos 41 JSONs do modelo unificado por `adito-etl montar-json`; DuckDB final por [../scripts/gerar_duckdb.py](../scripts/gerar_duckdb.py).
 
 - **[discovery/adito.md](discovery/adito.md)** (rev. 4) e **[requirements/adito-etl.md](requirements/adito-etl.md)**.
 - **[product_backlog.md](product_backlog.md)**: stories US-ETL-01 a US-ETL-07 em [stories/](stories/).

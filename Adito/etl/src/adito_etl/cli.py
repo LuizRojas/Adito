@@ -8,6 +8,8 @@
     adito-etl lattes [--lista entradas/lattes.csv] [--max N] [--workers N]
     adito-etl lattes-converter --de PASTA_COM_JSON_DO_SCRIPTLATTES
     adito-etl cruzar
+    adito-etl montar-json [--saida PASTA]
+    adito-etl validar-json [PASTA]
     adito-etl verificar-pii
 
 Saída: 0 = ok; 1 = terminou com falhas em unidades (listadas); 2 = erro que
@@ -48,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("src-acoes", help="Ações do SRC pela consulta pública (US-ETL-01)")
     p.add_argument("--campus", default="Serra")
     p.add_argument("--max", type=int, default=None, help="Limite de ações (teste)")
+    p.add_argument("--workers", type=int, default=4,
+                   help="Downloads paralelos de detalhe/vínculos (padrão: 4; 1 = em série)")
     p.add_argument("--no-headless", action="store_true")
 
     p = sub.add_parser("src-participacoes", help="Público-alvo e equipe do SRC, sem CPF/e-mail (US-ETL-02)")
@@ -75,6 +79,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--de", required=True, type=Path, help="Pasta com os JSON do scriptLattes")
 
     sub.add_parser("cruzar", help="Liga pessoas entre as fontes pelo nome (US-ETL-06)")
+    p = sub.add_parser("montar-json", help="Monta os 41 JSONs do modelo unificado + manifesto.json direto do bruto (US-ETL-08)")
+    p.add_argument("--saida", type=Path, default=None, help="Pasta de saída (padrão: etl/saida/json)")
+
+    p = sub.add_parser("validar-json", help="Confere uma pasta de JSONs montados (contagens, colunas, chaves estrangeiras)")
+    p.add_argument("pasta", nargs="?", type=Path, default=None, help="Padrão: etl/saida/json")
+
     sub.add_parser("verificar-pii", help="Confere que brutos/ e trabalho/ não têm CPF nem e-mail")
 
     args = ap.parse_args(argv)
@@ -82,7 +92,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.comando == "src-acoes":
             from .fontes.src.acoes import extrair_acoes
             return _resumo(extrair_acoes(args.campus, headless=not args.no_headless,
-                                         max_acoes=args.max, log=_log("src-acoes")))
+                                         max_acoes=args.max, workers=args.workers,
+                                         log=_log("src-acoes")))
         if args.comando == "src-participacoes":
             from .fontes.src.participacoes import extrair_participacoes
             return _resumo(extrair_participacoes(args.processo, headless=not args.no_headless,
@@ -113,6 +124,24 @@ def main(argv: list[str] | None = None) -> int:
                   f"{rel['ligadas_por_variante']} | ambíguos: {len(rel['ambiguos'])} | "
                   f"nomes não plausíveis: {len(rel['nomes_implausiveis'])}")
             print(f"relatório: {trabalho_dir() / 'relatorio_cruzamento.md'}")
+            return 0
+        if args.comando in ("montar-json", "validar-json"):
+            from .montagem import ErroMontagem, montar, validar_pasta
+            from .montagem.saida import imprimir_resumo
+            try:
+                if args.comando == "montar-json":
+                    rel = montar(base_dir(), args.saida, log=_log("montar-json"))
+                    for k, v in rel["avisos"].items():
+                        print(f"  aviso: {k}: {v['quantidade']}")
+                    for k, v in rel["dados_sem_coluna_no_esquema"].items():
+                        print(f"  sem coluna: {k}: {v}")
+                    imprimir_resumo(rel["conferencia"])
+                else:
+                    pasta = (args.pasta or base_dir() / "saida" / "json").expanduser().resolve()
+                    imprimir_resumo(validar_pasta(pasta))
+            except ErroMontagem as e:
+                print(f"erro: {e}", file=sys.stderr)
+                return 2
             return 0
         if args.comando == "verificar-pii":
             problemas = varrer(base_dir() / "brutos", trabalho_dir())
