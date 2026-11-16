@@ -59,16 +59,40 @@ setup-etl: ## ETL: venv + dependências Python + Chromium do Playwright
 	fi
 
 # ---------------------------------------------------------------- app
-.PHONY: up down backend desktop
-up: desktop ## Sobe o Oráculo ESX em modo desenvolvimento (Vite + Tauri + backend)
+.PHONY: up down backend desktop web check-cargo check-node
+up: desktop ## Sobe o Oráculo ESX em modo desenvolvimento (Vite + janela Tauri + backend)
 
 backend: setup-app ## Só o backend Django (http://127.0.0.1:$(PORT_BACKEND))
 	ORACULO_LOCAL_TOKEN="$${ORACULO_LOCAL_TOKEN:-local-dev-token}" \
 	ORACULO_DADOS_DB="$${ORACULO_DADOS_DB:-$(APP)/data/dados.duckdb}" \
 	"$(APP_PY)" "$(APP)/backend/api/desktop_server.py" --port $(PORT_BACKEND)
 
-desktop: setup-app ## App inteiro: Vite + janela Tauri + backend (via rodar_desktop.sh)
+desktop: setup-app check-cargo ## App inteiro: Vite + janela Tauri + backend (via rodar_desktop.sh)
 	"$(ROOT)/rodar_desktop.sh"
+
+web: setup-app check-node ## Alternativa sem Rust: sobe o backend e o Vite (abre em http://localhost:$(PORT_VITE))
+	@echo "→ subindo o Vite em http://localhost:$(PORT_VITE) e o backend em http://127.0.0.1:$(PORT_BACKEND)"
+	@trap 'kill 0' EXIT; \
+	 ORACULO_LOCAL_TOKEN="$${ORACULO_LOCAL_TOKEN:-local-dev-token}" \
+	 ORACULO_DADOS_DB="$${ORACULO_DADOS_DB:-$(APP)/data/dados.duckdb}" \
+	 "$(APP_PY)" "$(APP)/backend/api/desktop_server.py" --port $(PORT_BACKEND) & \
+	 cd "$(APP)/frontend-vue" && ./node_modules/.bin/vite
+
+check-cargo: ## (interno) confere que o Rust está instalado para o Tauri
+	@if ! command -v cargo >/dev/null 2>&1 && [ ! -f "$$HOME/.cargo/env" ]; then \
+	  echo "erro: o 'cargo' (Rust) não está instalado — o Tauri (janela nativa) precisa dele."; \
+	  echo "  Instale com:  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; \
+	  echo "  Depois:       source \"\$$HOME/.cargo/env\"  (abra um shell novo)"; \
+	  echo "  Alternativa sem Rust: 'make web' sobe backend + Vite para abrir no navegador."; \
+	  exit 1; \
+	fi
+
+check-node: ## (interno) confere que as deps do frontend-vue já foram instaladas
+	@if [ ! -x "$(APP)/frontend-vue/node_modules/.bin/vite" ]; then \
+	  echo "erro: dependências do frontend-vue ausentes."; \
+	  echo "  Instale com:  cd \"$(APP)/frontend-vue\" && npm install"; \
+	  exit 1; \
+	fi
 
 down: ## Derruba o backend, o Vite e qualquer cargo run do Tauri desta pasta
 	@echo "→ parando processos locais do Adito (pode pedir confirmação do sistema)"
